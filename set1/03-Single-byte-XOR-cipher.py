@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-def string2binary(s):
+def hex2char(s):
 	return s.decode("hex")
 	
-def binary2string(b):
+def char2hex(b):
 	return b.encode("hex")
 
 def charIntXor(a, b):
@@ -16,7 +16,7 @@ def decodeXor(b, x):
 		return None
 
 	# decode
-	result = ''
+	result = ""
 	for i in range(0, len(b)):
 		c = charIntXor(b[i], x)
 
@@ -30,7 +30,7 @@ def decodeXor(b, x):
 	return result
 
 def decodeSingleXor(s):
-	b = string2binary(s)
+	b = hex2char(s)
 	for i in range(0, 255):
 		s = decodeXor(b, i)
 		if s != None:

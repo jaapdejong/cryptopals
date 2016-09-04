@@ -2,11 +2,11 @@
 
 import base64
 
-def string2binary(s):
+def hex2char(s):
 	return s.decode("hex")
 	
 def hex2base64(s):
-	b = string2binary(s)
+	b = hex2char(s)
 	result = base64.b64encode(b)
 	return result
 
