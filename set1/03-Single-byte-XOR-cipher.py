@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 
-def hex2char(s):
+def hexString2string(s):
 	return s.decode("hex")
 	
-def char2hex(b):
+def string2hexString(b):
 	return b.encode("hex")
 
 def charIntXor(a, b):
 	return chr(ord(a) ^ b)
 
-def decodeXor(b, x):
+def decodeStringWithSingleInt(b, x):
 	# enough spaces?
 	c = charIntXor(' ', x)
 	if b.count(c) < len(b) / 8:
@@ -29,12 +29,12 @@ def decodeXor(b, x):
 	# found a legal string!
 	return result
 
-def decodeSingleXor(s):
-	b = hex2char(s)
+def solveDecodeStringWithSingleInt(s):
+	b = hexString2string(s)
 	for i in range(0, 255):
-		s = decodeXor(b, i)
+		s = decodeStringWithSingleInt(b, i)
 		if s != None:
 			print s
 
-decodeSingleXor("1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736")
+solveDecodeStringWithSingleInt("1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736")
 
