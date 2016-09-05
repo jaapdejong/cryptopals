@@ -2,22 +2,15 @@
 
 import base64
 
-def encodeBase64(s):
-	return base64.b64encode(s)
-
-def decodeBase64(s):
-	return base64.b64decode(s)
+encodeBase64 = lambda s: base64.b64encode(s)
+decodeBase64 = lambda s: base64.b64decode(s)
 
 from Crypto.Cipher import AES
-def encodeAES(key, s):
-	c = AES.new(key)
-	size = len(key)
-	s = s + (size - len(s) % size) * chr(0x04)
-	return c.encrypt(s)
-	
-def decodeAES(key, s):
-	c = AES.new(key)
-	return c.decrypt(s).rstrip(chr(0x04))
+
+pad = lambda s, l: s + (l - len(s) % l) * chr(l - len(s) % l)
+unpad = lambda s: s[:-ord(s[-1:])]
+encodeAES = lambda key, s: AES.new(key).encrypt(pad(s, len(key)))
+decodeAES = lambda key, s: unpad(AES.new(key).decrypt(s))
 
 encodedText = \
 	"CRIwqt4+szDbqkNY+I0qbDe3LQz0wiw0SuxBQtAM5TDdMbjCMD/venUDW9BL" + \
