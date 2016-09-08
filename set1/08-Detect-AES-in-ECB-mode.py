@@ -1,48 +1,56 @@
 #!/usr/bin/env python
 
 import base64
-
 encodeBase64 = lambda s: base64.b64encode(s)
 decodeBase64 = lambda s: base64.b64decode(s)
 
 from Crypto.Cipher import AES
-
 pad = lambda s, l: s + (l - len(s) % l) * chr(l - len(s) % l)
 unpad = lambda s: s[:-ord(s[-1:])]
 encodeAES = lambda key, s: AES.new(key).encrypt(pad(s, len(key)))
 decodeAES = lambda key, s: unpad(AES.new(key).decrypt(s))
 
-def hexString2string(s):
-	return s.decode("hex")
+hexString2string = lambda s: s.decode("hex")
+string2hexString = lambda s: s.encode("hex")
+stringStringXor = lambda s1, s2: ''.join(chr(ord(a) ^ ord(b)) for a,b in zip(s1, s2))
 
-def string2hexString(b):
-	return b.encode("hex")
+def hammingDistance(s1, s2):
+	x = stringStringXor(s1, s2)
 
-def probe(pos, key, s):
-	if pos == len(key):
-		return key
-	else:
-		for x in range(0, 256):
-			newkey = key[:pos] + chr(x) + key[pos+1:]
-			d = decodeAES(newkey, s)
-			c = d[pos:pos+1]
-#			print pos, string2hexString(newkey[0:pos+1]), string2hexString(c), string2hexString(d[0:pos+1])
-			if (c >= ' ' and c <= '~') or c == '\x0a' or c == '\x0d':
-				k = probe(pos + 1, newkey, s)
-				if k != None:
-					return k
-	return None
-	
-def findKey(s, keyLength):
-	key = '' + keyLength * '\x00'
-	key = probe(0, key, s)
-	if key != None:
-#		print string2hexString(key)
-		print decodeAES(key, s)
+	# count 1's
+	diffs = 0
+	for i in range(0, len(x)):
+		a = ord(x[i])
+		while a != 0:
+			if a % 2 == 1:
+				diffs += 1
+			a /= 2
+	return diffs
+
+assert hammingDistance("this is a test", "wokka wokka!!!") == 37
+
+def bestKeyLength(s):
+	bestDistance = None
+	bestKeyLength = None
+	end = min(len(s), 40)
+	for keyLength in range(2, end):
+		totalDistance = 0
+		chunks = len(s) / keyLength
+		for n in range(0, chunks):
+			s1 = s[n * keyLength:(n + 1) * keyLength]
+			s2 = s[(n + 1) * keyLength:(n + 2) * keyLength]
+			totalDistance += hammingDistance(s1, s2)
+		distance = totalDistance * 1.0 / chunks / keyLength
+		if bestDistance == None or bestDistance > distance:
+			bestDistance = distance
+			bestKeyLength = keyLength
+
+	return bestKeyLength
+
+assert bestKeyLength("123456789012345678901234567801234567") == 29
 
 strings = []
-def append(s):
-	strings.append(hexString2string(s))
+append = lambda s: strings.append(hexString2string(s))
 	
 append("8a10247f90d0a05538888ad6205882196f5f6d05c21ec8dca0cb0be02c3f8b09e382963f443aa514daa501257b09a36bf8c4c392d8ca1bf4395f0d5f2542148c7e5ff22237969874bf66cb85357ef99956accf13ba1af36ca7a91a50533c4d89b7353f908c5a166774293b0bf6247391df69c87dacc4125a99ec417221b58170e633381e3847c6b1c28dda2913c011e13fc4406f8fe73bbf78e803e1d995ce4d")
 append("bd20aad820c9e387ea57408566e5844c1e470e9d6fbbdba3a6b4df1dd85bce2208f1944f1827d015df9c46c22803f41d1052acb721977f0ccc13db95c970252091ea5e36e423ee6a2f2d12ef909fcadd42529885d221af1225e32161b85e6dc03465cf398c937846b18bac05e88820a567caac113762753dffbe6ece09823bab5aee947a682bb3156f42df1d8dc320a897ee79981cf937390b4ae93eb8657f6c")
@@ -249,13 +257,15 @@ append("95b3a1adbcf8d2987c2f2cba58d5f0a4ef6e0301e186b8d62a59acb6eb4be54867136f31
 append("a6cadd53a2621482b7d66ecc82dc4ea6431bc0191c3801ac6b705df38c7fffe469043e5002096aca4aaca5ef033cc2c5f884d5c339d9a648ffa9400098c7851b9f5990b3771fcf55b196b7c2723085ad11268daadd411967a6a545986c93b86b7f72387bf68dc6ae8dcfd21c7f57ba70b15f3f5517c5585f345ff751c7bf21dc1a33d396ba180a2cb22998fc05ca47b5525a2c150effb15ffd681006c479f0c5")
 append("06df04188832b10afff94209d2aa1c8a123702de28234dcd3e0a7d36c1aa8449e6fa55e3e1e3d77d8424e87a45e38697755f84c49a99473797268113eb69098888947526035b246d00a630f6201ecc4075d8aa6604de73e2119e264e4c96751f2a67a2e46cf467a0df8f0520bcf4762b2715aba266d9b3f5e8fa67d12f9caac928b07ac3be99f41120655aa77f6433fc264673a92929e792187f87b5fda50cf2")
 
-findKey(strings[0], 16)
+nr = 0
+bestLength = None
+bestNr = None
+for s in strings:
+	nr += 1
+	n = bestKeyLength(s)
+	if bestLength == None or bestLength > n:
+		bestLength = n
+		bestNr = nr
 
-##cnt = 0
-#for s in strings:
-#	#print "cnt =", cnt
-#	#cnt += 1
-#	findKey(s, 16)
-#	findKey(s, 24)
-#	findKey(s, 32)
+print "best:", bestNr, "length =", bestLength
 
