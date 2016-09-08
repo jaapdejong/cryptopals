@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 def hexString2string(s):
 	return s.decode("hex")
