@@ -1,0 +1,19 @@
+#!/usr/bin/python
+
+def pad(s, l):
+	if len(s) > l:
+		return None
+	c = l - len(s) % l
+	return s + c * chr(c)
+
+#pad = lambda s, l: s + (l - len(s) % l) * chr(l - len(s) % l)
+
+s = "YELLOW SUBMARINE"
+
+assert pad(s, 15) == None
+assert pad(s, 16) == "YELLOW SUBMARINE\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10"
+assert pad(s, 17) == "YELLOW SUBMARINE\x01"
+assert pad(s, 18) == "YELLOW SUBMARINE\x02\x02"
+assert pad(s, 19) == "YELLOW SUBMARINE\x03\x03\x03"
+assert pad(s, 20) == "YELLOW SUBMARINE\x04\x04\x04\x04"
+
