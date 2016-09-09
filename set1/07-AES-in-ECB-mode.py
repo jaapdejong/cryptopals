@@ -9,8 +9,8 @@ from Crypto.Cipher import AES
 
 pad = lambda s, l: s + (l - len(s) % l) * chr(l - len(s) % l)
 unpad = lambda s: s[:-ord(s[-1:])]
-encodeAES = lambda key, s: AES.new(key).encrypt(pad(s, len(key)))
-decodeAES = lambda key, s: unpad(AES.new(key).decrypt(s))
+encodeECB = lambda key, s: AES.new(key).encrypt(pad(s, len(key)))
+decodeECB = lambda key, s: unpad(AES.new(key).decrypt(s))
 
 encodedText = \
 	"CRIwqt4+szDbqkNY+I0qbDe3LQz0wiw0SuxBQtAM5TDdMbjCMD/venUDW9BL" + \
@@ -80,8 +80,8 @@ encodedText = \
 
 cryptedText = decodeBase64(encodedText)
 key = "YELLOW SUBMARINE"
-plainText = decodeAES(key, cryptedText)
+plainText = decodeECB(key, cryptedText)
 print plainText
 
-assert cryptedText == encodeAES(key, plainText)
+assert cryptedText == encodeECB(key, plainText)
 
