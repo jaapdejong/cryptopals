@@ -1,15 +1,5 @@
 #!/usr/bin/python
 
-import base64
-encodeBase64 = lambda s: base64.b64encode(s)
-decodeBase64 = lambda s: base64.b64decode(s)
-
-from Crypto.Cipher import AES
-pad = lambda s, l: s + (l - len(s) % l) * chr(l - len(s) % l)
-unpad = lambda s: s[:-ord(s[-1:])]
-encodeAES = lambda key, s: AES.new(key).encrypt(pad(s, len(key)))
-decodeAES = lambda key, s: unpad(AES.new(key).decrypt(s))
-
 hexString2string = lambda s: s.decode("hex")
 string2hexString = lambda s: s.encode("hex")
 stringStringXor = lambda s1, s2: ''.join(chr(ord(a) ^ ord(b)) for a,b in zip(s1, s2))
