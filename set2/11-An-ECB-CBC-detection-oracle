@@ -70,40 +70,79 @@ def encodeCBC(key, IV, plainText):
 
 	return cipherText
 
+key = "1234567890123456"
+IV = "ABCDEFGHIJKLMNOP"
+assert decodeCBC(key, IV, encodeCBC(key, IV,"YELLOW SUBMARI")) == "YELLOW SUBMARI"
+assert decodeCBC(key, IV, encodeCBC(key, IV,"YELLOW SUBMARIN")) == "YELLOW SUBMARIN"
+assert decodeCBC(key, IV, encodeCBC(key, IV,"YELLOW SUBMARINE")) == "YELLOW SUBMARINE"
+assert decodeCBC(key, IV, encodeCBC(key, IV,"YELLOW SUBMARINES")) == "YELLOW SUBMARINES"
+assert decodeCBC(key, IV, encodeCBC(key, IV,"YELLOW SUBMARINES!")) == "YELLOW SUBMARINES!"
+
+def hammingDistance(s1, s2):
+	x = stringStringXor(s1, s2)
+
+	# count 1's
+	diffs = 0
+	for i in range(0, len(x)):
+		a = ord(x[i])
+		while a != 0:
+			if a % 2 == 1:
+				diffs += 1
+			a /= 2
+	return diffs
+
+assert hammingDistance("this is a test","wokka wokka!!!") == 37
+
+def bestKeyLength(s):
+	bestDistance = None
+	bestKeyLength = None
+	end = min(len(s), 40)
+	for keyLength in range(2, end):
+		totalDistance = 0
+		chunks = len(s) / keyLength
+		for n in range(0, chunks):
+			s1 = s[n * keyLength:(n + 1) * keyLength]
+			s2 = s[(n + 1) * keyLength:(n + 2) * keyLength]
+			totalDistance += hammingDistance(s1, s2)
+		distance = totalDistance * 1.0 / chunks / keyLength
+		if bestDistance == None or bestDistance > distance:
+			bestDistance = distance
+			bestKeyLength = keyLength
+
+	return bestKeyLength
+
+assert bestKeyLength("123456789012345678901234567801234567") == 29
+
 from random import randint
 def randomString(n):
-	result = ""
+	result =""
 	for x in range(0, n):
-		result += chr(randint(0,255))
+		result += chr(randint(0, 255))
 	return result
 	
 def encryptionOracle(data):
 	data = randomString(randint(5, 10)) + data + randomString(randint(5, 10))
 	key = randomString(BLOCKSIZE)
 	encryptMode = randint(0, 1)
+	print "encrypted with",
 	if encryptMode == 0:
-		print "encrypted with ECB -->",
+		print "ECB -->",
 		return encodeECB(key, data)
 	else:
-		print "encrypted with CBC -->",
+		print "CBC -->",
 		IV = randomString(BLOCKSIZE)
 		return encodeCBC(key, IV, data)
 		
 		
 def detectEncryption(encryptedData):
-	print "detected: ECB"
-	
-plainText = "On the other hand, we denounce with righteous indignation and dislike men who are" + \
-	"so beguiled and demoralized by the charms of pleasure of the moment, so blinded by desire, that" + \
-	"they cannot foresee the pain and trouble that are bound to ensue; and equal blame belongs to" + \
-	"those who fail in their duty through weakness of will, which is the same as saying through" + \
-	"shrinking from toil and pain. These cases are perfectly simple and easy to distinguish. In a free" + \
-	"hour, when our power of choice is untrammelled and when nothing prevents our being able to do what" + \
-	"we like best, every pleasure is to be welcomed and every pain avoided. But in certain circumstances" + \
-	"and owing to the claims of duty or the obligations of business it will frequently occur that" + \
-	"pleasures have to be repudiated and annoyances accepted. The wise man therefore always holds in" + \
-	"these matters to this principle of selection: he rejects pleasures to secure other greater" + \
-	"pleasures, or else he endures pains to avoid worse pains."
+	keyLength = bestKeyLength(encryptedData)
+	if keyLength % BLOCKSIZE == 0:
+		print "ECB",
+	else:
+		print "CBC",
+	print "assumed"
+
+plainText = "YELLOW SUBMARINE" * 50
 
 for i in range(1, 20):
 	encryptedData = encryptionOracle(plainText)
