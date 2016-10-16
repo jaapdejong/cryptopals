@@ -120,7 +120,7 @@ def encodeCBC(key, IV, plainText):
 		IV = cipherBlock
 		offset += BLOCKSIZE
 
-	# add padding if last byte exactly on BLCOKSIZE boundary
+	# add padding if last byte exactly on BLOCKSIZE boundary
 	if offset == len(plainText):
 		c = BLOCKSIZE
 		plainBlock = chr(c) * c

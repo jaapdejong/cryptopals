@@ -1,1 +1,114 @@
 #!/usr/bin/python
+
+# An ECB/CBC detection oracle
+# Now that you have ECB and CBC working:
+# 
+# Write a function to generate a random AES key; that's just 16 random bytes.
+# 
+# Write a function that encrypts data under an unknown key --- that is, a function that generates a random key and encrypts under it.
+# 
+# The function should look like:
+# 
+# encryption_oracle(your-input)
+# => [MEANINGLESS JIBBER JABBER]
+# Under the hood, have the function append 5-10 bytes (count chosen randomly) before the plaintext and 5-10 bytes after the plaintext.
+# 
+# Now, have the function choose to encrypt under ECB 1/2 the time, and under CBC the other half (just use random IVs each time for CBC). Use rand(2) to decide which to use.
+# 
+# Detect the block cipher mode the function is using each time. You should end up with a piece of code that, pointed at a block box that might be encrypting ECB or CBC, tells you which one is happening.
+
+hexString2string = lambda s: s.decode("hex")
+string2hexString = lambda s: s.encode("hex")
+stringStringXor = lambda s1, s2: ''.join(chr(ord(a) ^ ord(b)) for a,b in zip(s1, s2))
+
+from Crypto.Cipher import AES
+pad = lambda s, l: s + (l - len(s) % l) * chr(l - len(s) % l)
+unpad = lambda s: s[:-ord(s[-1:])]
+encodeECB = lambda key, s: AES.new(key).encrypt(pad(s, len(key)))
+decodeECB = lambda key, s: unpad(AES.new(key).decrypt(s))
+
+BLOCKSIZE = 16
+def decodeCBC(key, IV, cipherText):
+	plainText = ''
+	offset = 0
+	aes = AES.new(key)
+	while offset < len(cipherText):
+		cipherBlock = cipherText[offset:offset+BLOCKSIZE]
+		ecbBlock = aes.decrypt(cipherBlock)
+		plainBlock = stringStringXor(ecbBlock, IV)
+		plainText += plainBlock
+		IV = cipherBlock
+		offset += BLOCKSIZE
+
+	# strip off padding bytes
+	plainText = plainText[:-ord(plainText[-1:])]
+	return plainText
+
+def encodeCBC(key, IV, plainText):
+	cipherText = ''
+	offset = 0
+	aes = AES.new(key)
+	while offset < len(plainText):
+		plainBlock = plainText[offset:offset+BLOCKSIZE]
+		# add padding
+		if len(plainBlock) < BLOCKSIZE:
+			c = BLOCKSIZE - len(plainBlock)
+			plainBlock += chr(c) * c
+		ecbBlock = stringStringXor(plainBlock, IV)
+		cipherBlock = aes.encrypt(ecbBlock)
+		cipherText += cipherBlock
+		IV = cipherBlock
+		offset += BLOCKSIZE
+
+	# add padding if last byte exactly on BLOCKSIZE boundary
+	if offset == len(plainText):
+		c = BLOCKSIZE
+		plainBlock = chr(c) * c
+		ecbBlock = stringStringXor(plainBlock, IV)
+		cipherBlock = aes.encrypt(ecbBlock)
+		cipherText += cipherBlock
+
+	return cipherText
+
+from random import randint
+def randomString(n):
+	result = ""
+	for x in range(0, n):
+		result += chr(randint(0,255))
+	return result
+	
+def encryptionOracle(data):
+	data = randomString(randint(5, 10)) + data + randomString(randint(5, 10))
+	key = randomString(BLOCKSIZE)
+	encryptMode = randint(0, 1)
+	if encryptMode == 0:
+		print "encrypted with ECB -->",
+		return encodeECB(key, data)
+	else:
+		print "encrypted with CBC -->",
+		IV = randomString(BLOCKSIZE)
+		return encodeCBC(key, IV, data)
+		
+		
+def detectEncryption(encryptedData):
+	print "detected: ECB"
+	
+plainText = "On the other hand, we denounce with righteous indignation and dislike men who are" + \
+	"so beguiled and demoralized by the charms of pleasure of the moment, so blinded by desire, that" + \
+	"they cannot foresee the pain and trouble that are bound to ensue; and equal blame belongs to" + \
+	"those who fail in their duty through weakness of will, which is the same as saying through" + \
+	"shrinking from toil and pain. These cases are perfectly simple and easy to distinguish. In a free" + \
+	"hour, when our power of choice is untrammelled and when nothing prevents our being able to do what" + \
+	"we like best, every pleasure is to be welcomed and every pain avoided. But in certain circumstances" + \
+	"and owing to the claims of duty or the obligations of business it will frequently occur that" + \
+	"pleasures have to be repudiated and annoyances accepted. The wise man therefore always holds in" + \
+	"these matters to this principle of selection: he rejects pleasures to secure other greater" + \
+	"pleasures, or else he endures pains to avoid worse pains."
+
+for i in range(1, 20):
+	encryptedData = encryptionOracle(plainText)
+	detectEncryption(encryptedData)
+	
+
+
+
