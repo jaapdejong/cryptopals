@@ -1,1 +1,145 @@
 #!/usr/bin/python
+
+# Byte-at-a-time ECB decryption (Simple)
+# Copy your oracle function to a new function that encrypts buffers under ECB mode using a consistent but unknown key (for instance, assign a single random key, once, to a global variable).
+# 
+# Now take that same function and have it append to the plaintext, BEFORE ENCRYPTING, the following string:
+# 
+# Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg
+# aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq
+# dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg
+# YnkK
+# Spoiler alert.
+# Do not decode this string now.
+# Don't do it.
+# 
+# Base64 decode the string before appending it.
+# Do not base64 decode the string by hand; make your code do it.
+# The point is that you don't know its contents.
+# 
+# What you have now is a function that produces:
+# 
+# AES-128-ECB(your-string || unknown-string, random-key)
+# It turns out: you can decrypt "unknown-string" with repeated calls to the oracle function!
+# 
+# Here's roughly how:
+# 
+# Feed identical bytes of your-string to the function 1 at a time --- start with 1 byte ("A"), then "AA", then "AAA" and so on.
+# Discover the block size of the cipher.
+# You know it, but do this step anyway.
+# Detect that the function is using ECB.
+# You already know, but do this step anyways.
+# Knowing the block size, craft an input block that is exactly 1 byte short (for instance, if the block size is 8 bytes, make "AAAAAAA").
+# Think about what the oracle function is going to put in that last byte position.
+# Make a dictionary of every possible last byte by feeding different strings to the oracle; for instance, "AAAAAAAA", "AAAAAAAB", "AAAAAAAC", remembering the first block of each invocation.
+# Match the output of the one-byte-short input to one of the entries in your dictionary.
+# You've now discovered the first byte of unknown-string.
+# Repeat for the next byte.
+#
+# Congratulations.
+# This is the first challenge we've given you whose solution will break real crypto.
+# Lots of people know that when you encrypt something in ECB mode, you can see penguins through it.
+# Not so many of them can decrypt the contents of those ciphertexts, and now you can.
+# If our experience is any guideline, this attack will get you code execution in security tests about once a year.
+
+# randomString
+from random import randint
+def randomString(n):
+	result =""
+	for x in range(0, n):
+		result += chr(randint(0, 255))
+	return result
+
+# encodeBase64 / decodeBase64
+import base64
+encodeBase64 = lambda s: base64.b64encode(s)
+decodeBase64 = lambda s: base64.b64decode(s)
+s1 = randomString(32)
+assert decodeBase64(encodeBase64(s1)) == s1
+
+# hexString2string / string2hexString
+hexString2string = lambda s: s.decode("hex")
+string2hexString = lambda s: s.encode("hex")
+assert string2hexString(hexString2string("00112233445566778899aabbccddeeff")) == "00112233445566778899aabbccddeeff"
+
+# stringStringXor
+stringStringXor = lambda s1, s2: ''.join(chr(ord(a) ^ ord(b)) for a,b in zip(s1, s2))
+s1 = randomString(32)
+s2 = randomString(32)
+s3 = stringStringXor(s1, s2)
+assert stringStringXor(s3, s2) == s1
+
+# encodeECB / decodeECB
+from Crypto.Cipher import AES
+pad = lambda s, l: s + (l - len(s) % l) * chr(l - len(s) % l)
+unpad = lambda s: s[:-ord(s[-1:])]
+encodeECB = lambda key, s: AES.new(key).encrypt(pad(s, len(key)))
+decodeECB = lambda key, s: unpad(AES.new(key).decrypt(s))
+key = "1234567890123456"
+assert decodeECB(key, encodeECB(key, "Hello World!")) == "Hello World!"
+
+# encodeCBC / decodeCBC
+BLOCKSIZE = 16
+def encodeCBC(key, IV, plainText):
+	cipherText = ''
+	offset = 0
+	aes = AES.new(key)
+	while offset < len(plainText):
+		plainBlock = plainText[offset:offset+BLOCKSIZE]
+		# add padding
+		if len(plainBlock) < BLOCKSIZE:
+			c = BLOCKSIZE - len(plainBlock)
+			plainBlock += chr(c) * c
+		ecbBlock = stringStringXor(plainBlock, IV)
+		cipherBlock = aes.encrypt(ecbBlock)
+		cipherText += cipherBlock
+		IV = cipherBlock
+		offset += BLOCKSIZE
+
+	# add padding if last byte exactly on BLOCKSIZE boundary
+	if offset == len(plainText):
+		c = BLOCKSIZE
+		plainBlock = chr(c) * c
+		ecbBlock = stringStringXor(plainBlock, IV)
+		cipherBlock = aes.encrypt(ecbBlock)
+		cipherText += cipherBlock
+
+	return cipherText
+
+def decodeCBC(key, IV, cipherText):
+	plainText = ''
+	offset = 0
+	aes = AES.new(key)
+	while offset < len(cipherText):
+		cipherBlock = cipherText[offset:offset+BLOCKSIZE]
+		ecbBlock = aes.decrypt(cipherBlock)
+		plainBlock = stringStringXor(ecbBlock, IV)
+		plainText += plainBlock
+		IV = cipherBlock
+		offset += BLOCKSIZE
+
+	# strip off padding bytes
+	plainText = plainText[:-ord(plainText[-1:])]
+	return plainText
+
+key = "1234567890123456"
+IV = "ABCDEFGHIJKLMNOP"
+assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARI")) == "YELLOW SUBMARI"
+assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARIN")) == "YELLOW SUBMARIN"
+assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARINE")) == "YELLOW SUBMARINE"
+assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARINES")) == "YELLOW SUBMARINES"
+assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARINES!")) == "YELLOW SUBMARINES!"
+
+# the challenge
+key = randomString(BLOCKSIZE)
+encodedExtraString = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg" + \
+	"aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq" + \
+	"dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg" + \
+	"YnkK"
+	
+decodedExtraString = decodeBase64(encodedExtraString)
+
+def encryptionOracle(key, data):
+	data = data + decodedExtraString
+	return encodeECB(key, data)
+

@@ -72,11 +72,11 @@ def encodeCBC(key, IV, plainText):
 
 key = "1234567890123456"
 IV = "ABCDEFGHIJKLMNOP"
-assert decodeCBC(key, IV, encodeCBC(key, IV,"YELLOW SUBMARI")) == "YELLOW SUBMARI"
-assert decodeCBC(key, IV, encodeCBC(key, IV,"YELLOW SUBMARIN")) == "YELLOW SUBMARIN"
-assert decodeCBC(key, IV, encodeCBC(key, IV,"YELLOW SUBMARINE")) == "YELLOW SUBMARINE"
-assert decodeCBC(key, IV, encodeCBC(key, IV,"YELLOW SUBMARINES")) == "YELLOW SUBMARINES"
-assert decodeCBC(key, IV, encodeCBC(key, IV,"YELLOW SUBMARINES!")) == "YELLOW SUBMARINES!"
+assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARI")) == "YELLOW SUBMARI"
+assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARIN")) == "YELLOW SUBMARIN"
+assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARINE")) == "YELLOW SUBMARINE"
+assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARINES")) == "YELLOW SUBMARINES"
+assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARINES!")) == "YELLOW SUBMARINES!"
 
 def hammingDistance(s1, s2):
 	x = stringStringXor(s1, s2)
