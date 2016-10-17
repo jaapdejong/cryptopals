@@ -96,7 +96,7 @@ assert hammingDistance("this is a test","wokka wokka!!!") == 37
 def bestKeyLength(s):
 	bestDistance = None
 	bestKeyLength = None
-	end = min(len(s), 40)
+	end = min(len(s), 80)
 	for keyLength in range(2, end):
 		totalDistance = 0
 		chunks = len(s) / keyLength
@@ -133,14 +133,13 @@ def encryptionOracle(data):
 		IV = randomString(BLOCKSIZE)
 		return encodeCBC(key, IV, data)
 		
-		
 def detectEncryption(encryptedData):
 	keyLength = bestKeyLength(encryptedData)
-	if keyLength % BLOCKSIZE == 0:
+	if keyLength <= BLOCKSIZE * 3 and keyLength % BLOCKSIZE == 0:
 		print "ECB",
 	else:
 		print "CBC",
-	print "assumed"
+	print "assumed", keyLength
 
 plainText = "YELLOW SUBMARINE" * 50
 
