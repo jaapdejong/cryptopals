@@ -70,49 +70,6 @@ def encodeCBC(key, IV, plainText):
 
 	return cipherText
 
-key = "1234567890123456"
-IV = "ABCDEFGHIJKLMNOP"
-assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARI")) == "YELLOW SUBMARI"
-assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARIN")) == "YELLOW SUBMARIN"
-assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARINE")) == "YELLOW SUBMARINE"
-assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARINES")) == "YELLOW SUBMARINES"
-assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARINES!")) == "YELLOW SUBMARINES!"
-
-def hammingDistance(s1, s2):
-	x = stringStringXor(s1, s2)
-
-	# count 1's
-	diffs = 0
-	for i in range(0, len(x)):
-		a = ord(x[i])
-		while a != 0:
-			if a % 2 == 1:
-				diffs += 1
-			a /= 2
-	return diffs
-
-assert hammingDistance("this is a test","wokka wokka!!!") == 37
-
-def bestKeyLength(s):
-	bestDistance = None
-	bestKeyLength = None
-	end = min(len(s), 80)
-	for keyLength in range(2, end):
-		totalDistance = 0
-		chunks = len(s) / keyLength
-		for n in range(0, chunks):
-			s1 = s[n * keyLength:(n + 1) * keyLength]
-			s2 = s[(n + 1) * keyLength:(n + 2) * keyLength]
-			totalDistance += hammingDistance(s1, s2)
-		distance = totalDistance * 1.0 / chunks / keyLength
-		if bestDistance == None or bestDistance > distance:
-			bestDistance = distance
-			bestKeyLength = keyLength
-
-	return bestKeyLength
-
-assert bestKeyLength("123456789012345678901234567801234567") == 29
-
 from random import randint
 def randomString(n):
 	result =""
@@ -134,14 +91,12 @@ def encryptionOracle(data):
 		return encodeCBC(key, IV, data)
 		
 def detectEncryption(encryptedData):
-	keyLength = bestKeyLength(encryptedData)
-	if keyLength <= BLOCKSIZE * 3 and keyLength % BLOCKSIZE == 0:
-		print "ECB",
+	if encryptedData[BLOCKSIZE:BLOCKSIZE * 2] == encryptedData[BLOCKSIZE * 2:BLOCKSIZE * 3]:
+		print "ECB"
 	else:
-		print "CBC",
-	print "assumed", keyLength
-
-plainText = "YELLOW SUBMARINE" * 50
+		print "CBC"
+	
+plainText = " " * 50
 
 for i in range(1, 20):
 	encryptedData = encryptionOracle(plainText)
