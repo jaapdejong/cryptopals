@@ -89,14 +89,18 @@ def encryptionOracle(data):
 		print "CBC -->",
 		IV = randomString(BLOCKSIZE)
 		return encodeCBC(key, IV, data)
-		
+
 def detectEncryption(encryptedData):
-	if encryptedData[BLOCKSIZE:BLOCKSIZE * 2] == encryptedData[BLOCKSIZE * 2:BLOCKSIZE * 3]:
+	# first block (1) & last block (4) contains 5-10 random unknown bytes added in encryptionOracle
+	# so we can only use intermediate blocks 2 & 3 to check for equal content
+	if encryptedData[BLOCKSIZE * 1:BLOCKSIZE * 2] == encryptedData[BLOCKSIZE * 2:BLOCKSIZE * 3]:
 		print "ECB"
 	else:
 		print "CBC"
-	
-plainText = " " * 50
+
+# must be larger than 3 * BLOCKSIZE - minimum number of added random unknown bytes = 48 - 5 = 43
+# if less, detectEncryption is not able to do a proper comparison of two blocks 
+plainText = " " * 43
 
 for i in range(1, 20):
 	encryptedData = encryptionOracle(plainText)
