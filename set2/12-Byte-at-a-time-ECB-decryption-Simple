@@ -131,15 +131,35 @@ assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARINES")) == "YELLOW SU
 assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARINES!")) == "YELLOW SUBMARINES!"
 
 # the challenge
-key = randomString(BLOCKSIZE)
-encodedExtraString = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg" + \
+encodedExtraText = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg" + \
 	"aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq" + \
 	"dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg" + \
 	"YnkK"
-	
-decodedExtraString = decodeBase64(encodedExtraString)
+decodedExtraText = decodeBase64(encodedExtraText)
 
 def encryptionOracle(key, data):
-	data = data + decodedExtraString
-	return encodeECB(key, data)
+	return encodeECB(key, data + decodedExtraText)
+
+def findNextChar(key, plainText):
+	# prepend 0..BLOCKSIZE-1 chars
+	prependText = " " * (BLOCKSIZE - len(plainText) % BLOCKSIZE - 1)
+	prependedPlainText = prependText + plainText
+	textLen = len(prependedPlainText) + 1
+	encryptedText = encryptionOracle(key, prependText)[:textLen]
+	for char in map(chr, xrange(0, 256)):
+		if encryptionOracle(key, prependedPlainText + char)[:textLen] == encryptedText:
+			return char			
+	return ""
+
+def decode():
+	plainText = ""
+	key = randomString(BLOCKSIZE)
+	while True:
+		nextChar = findNextChar(key, plainText)
+		if nextChar == "":
+			return plainText
+		plainText += nextChar
+
+print decode()
+
 
