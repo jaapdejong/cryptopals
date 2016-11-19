@@ -34,43 +34,84 @@
 # Decrypt the encoded user profile and parse it.
 # Using only the user input to profile_for() (as an oracle to generate "valid" ciphertexts) and the ciphertexts themselves, make a role=admin profile.
 
-def s2json(s):
-	result = "{"
-	pairs = s.split("&")
-	n = len(pairs)
-	for pair in pairs:
-		keyValue = pair.split("=")
-		if len(keyValue) > 1:
-			assert len(keyValue) == 2
-			result += "\n  " + keyValue[0] + ": '" + keyValue[1] + "'"
-			n -= 1
-			if n != 0:
-				result += ","
-	result += "\n}"
+hexString2string = lambda s: s.decode("hex")
+string2hexString = lambda s: s.encode("hex")
+stringStringXor = lambda s1, s2: "".join(chr(ord(a) ^ ord(b)) for a,b in zip(s1, s2))
+
+from Crypto.Cipher import AES
+pad = lambda s, l: s + (l - len(s) % l) * chr(l - len(s) % l)
+unpad = lambda s: s[:-ord(s[-1:])]
+encodeECB = lambda key, s: AES.new(key).encrypt(pad(s, len(key)))
+decodeECB = lambda key, s: unpad(AES.new(key).decrypt(s))
+
+from random import randint
+def randomString(n):
+	result =""
+	for x in range(0, n):
+		result += chr(randint(0, 255))
 	return result
 
-assert s2json("")                           == "{\n}"
-assert s2json("foo")                        == "{\n}"
+import re
+def s2json(s):						# "foo=bar&baz=qux&zap=zazzle"
+	s = re.sub(r"^(.+)$", r"{\n  \1'\n}", s)	# --> "{\n  foo=bar&baz=qux&zap=zazzle'\n}"
+	s = re.sub("=", ": '", s)			# --> "{\n  foo: 'bar&baz: 'qux&zap: 'zazzle'\n}"
+	s = re.sub("&", "',\n  " , s)			# --> "{\n  foo: 'bar',\n  baz: 'qux',\n  zap: 'zazzle'\n}"
+	return s
+		
+assert s2json("")                           == ""
 assert s2json("foo=")                       == "{\n  foo: ''\n}"
-assert s2json("foo=&")                      == "{\n  foo: '',\n}"
 assert s2json("foo=bar")                    == "{\n  foo: 'bar'\n}"
-assert s2json("foo=bar&")                   == "{\n  foo: 'bar',\n}"
-assert s2json("foo=bar&baz")                == "{\n  foo: 'bar',\n}"
 assert s2json("foo=bar&baz=")               == "{\n  foo: 'bar',\n  baz: ''\n}"
 assert s2json("foo=bar&baz=qux")            == "{\n  foo: 'bar',\n  baz: 'qux'\n}"
-assert s2json("foo=bar&baz=qux&")           == "{\n  foo: 'bar',\n  baz: 'qux',\n}"
-assert s2json("foo=bar&baz=qux&zap")        == "{\n  foo: 'bar',\n  baz: 'qux',\n}"
 assert s2json("foo=bar&baz=qux&zap=")       == "{\n  foo: 'bar',\n  baz: 'qux',\n  zap: ''\n}"
 assert s2json("foo=bar&baz=qux&zap=zazzle") == "{\n  foo: 'bar',\n  baz: 'qux',\n  zap: 'zazzle'\n}"
 
-def json2s(s):				# "{\n  foo: 'bar',\n  baz: 'qux',\n  zap: 'zazzle'\n}" 
-	s = s.replace("{\n  ", "")	# --> "foo: 'bar',\n  baz: 'qux',\n  zap: 'zazzle'\n}"
-	s = s.replace("'\n}", "")	# --> "foo: 'bar',\n  baz: 'qux',\n  zap: 'zazzle"
-	s = s.replace("',\n  ", "&")	# --> "foo: 'bar&baz: 'qux&zap: 'zazzle"
-	s = s.replace(": '", "=")	# --> "foo=bar&baz=qux&zap=zazzle"
+def json2s(s):						# "{\n  foo: 'bar',\n  baz: 'qux',\n  zap: 'zazzle'\n}" 
+	s = re.sub("{[ \n\r]*", "", s)			# --> "foo: 'bar',\n  baz: 'qux',\n  zap: 'zazzle'\n}"
+	s = re.sub("'[ \n\r]*}", "", s)			# --> "foo: 'bar',\n  baz: 'qux',\n  zap: 'zazzle"
+	s = re.sub("'[ \n\r]*,[ \n\r]*", "&", s)	# --> "foo: 'bar&baz: 'qux&zap: 'zazzle"
+	s = re.sub("[ \n\r]*:[ \n\r]*'", "=", s)	# --> "foo=bar&baz=qux&zap=zazzle"
 	return s
-	
-assert json2s("{\n  foo: 'bar'\n}") == "foo=bar"
-assert json2s("{\n  foo: 'bar',\n  baz: 'qux'\n}") == "foo=bar&baz=qux"
+
+assert json2s("")                                                    == ""
+assert json2s("{\n  foo: ''\n}")                                     == "foo="
+assert json2s("{\n  foo: 'bar'\n}")                                  == "foo=bar"
+assert json2s("{\n  foo: 'bar',\n  baz: ''\n}")                      == "foo=bar&baz="
+assert json2s("{\n  foo: 'bar',\n  baz: 'qux'\n}")                   == "foo=bar&baz=qux"
+assert json2s("{\n  foo: 'bar',\n  baz: 'qux',\n  zap: ''\n}")       == "foo=bar&baz=qux&zap="
 assert json2s("{\n  foo: 'bar',\n  baz: 'qux',\n  zap: 'zazzle'\n}") == "foo=bar&baz=qux&zap=zazzle"
+
+def profile_for(email):
+	return "email=" + email + "&uid=10&role=user"
+	
+assert profile_for("foo@bar.com") == "email=foo@bar.com&uid=10&role=user"
+
+BLOCKSIZE = 16
+key = randomString(BLOCKSIZE)
+
+# Goal: make sure a new block starts at the 'role' by changing the length of the emailaddress
+DOMAIN = "@bar.com"
+ROLEPOSITION = profile_for(DOMAIN).find("role=") + 5
+USER = "x" * (BLOCKSIZE - ROLEPOSITION % BLOCKSIZE)
+cipherText1 = encodeECB(key, profile_for(USER + DOMAIN))
+# email=xxxxx@bar.com&uid=10&role=user
+# ...............|...............|....
+
+# Goal: get 'admin' at the start of a new block and add fake padding
+ROLE = "admin"
+ADMINPOSITION = profile_for(ROLE).find(ROLE)
+USER = "+" * (BLOCKSIZE - ADMINPOSITION)
+cipherText2 = encodeECB(key, profile_for(USER + pad(ROLE, BLOCKSIZE)))
+# email=++++++++++adminXXXXXXXXXXX&uid=10&role=user
+# ...............|...............|...............|.
+
+# Add them together to form a new ciphertext
+PART1 = cipherText1[0:32]
+# email=xxxxx@bar.com&uid=10&role=
+# ...............|...............|
+PART2 = cipherText2[16:32]
+# adminXXXXXXXXXXX
+# ...............|
+print decodeECB(key, PART1 + PART2)
+# email=xxxxx@bar.com&uid=10&role=admin
 
