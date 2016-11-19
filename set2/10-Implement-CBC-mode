@@ -80,7 +80,7 @@ encodedText = \
 
 hexString2string = lambda s: s.decode("hex")
 string2hexString = lambda s: s.encode("hex")
-stringStringXor = lambda s1, s2: ''.join(chr(ord(a) ^ ord(b)) for a,b in zip(s1, s2))
+stringStringXor = lambda s1, s2: "".join(chr(ord(a) ^ ord(b)) for a,b in zip(s1, s2))
 
 import base64
 encodeBase64 = lambda s: base64.b64encode(s)
@@ -89,7 +89,7 @@ decodeBase64 = lambda s: base64.b64decode(s)
 from Crypto.Cipher import AES
 BLOCKSIZE = 16
 def decodeCBC(key, IV, cipherText):
-	plainText = ''
+	plainText = ""
 	offset = 0
 	aes = AES.new(key)
 	while offset < len(cipherText):
@@ -105,10 +105,10 @@ def decodeCBC(key, IV, cipherText):
 	return plainText
 
 def encodeCBC(key, IV, plainText):
-	cipherText = ''
+	cipherText = ""
 	offset = 0
 	aes = AES.new(key)
-	while offset < len(plainText):
+	while offset <= len(plainText):
 		plainBlock = plainText[offset:offset+BLOCKSIZE]
 		# add padding
 		if len(plainBlock) < BLOCKSIZE:
@@ -119,14 +119,6 @@ def encodeCBC(key, IV, plainText):
 		cipherText += cipherBlock
 		IV = cipherBlock
 		offset += BLOCKSIZE
-
-	# add padding if last byte exactly on BLOCKSIZE boundary
-	if offset == len(plainText):
-		c = BLOCKSIZE
-		plainBlock = chr(c) * c
-		ecbBlock = stringStringXor(plainBlock, IV)
-		cipherBlock = aes.encrypt(ecbBlock)
-		cipherText += cipherBlock
 
 	return cipherText
 

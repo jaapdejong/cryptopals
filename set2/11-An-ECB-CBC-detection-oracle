@@ -19,7 +19,7 @@
 
 hexString2string = lambda s: s.decode("hex")
 string2hexString = lambda s: s.encode("hex")
-stringStringXor = lambda s1, s2: ''.join(chr(ord(a) ^ ord(b)) for a,b in zip(s1, s2))
+stringStringXor = lambda s1, s2: "".join(chr(ord(a) ^ ord(b)) for a,b in zip(s1, s2))
 
 from Crypto.Cipher import AES
 pad = lambda s, l: s + (l - len(s) % l) * chr(l - len(s) % l)
@@ -29,7 +29,7 @@ decodeECB = lambda key, s: unpad(AES.new(key).decrypt(s))
 
 BLOCKSIZE = 16
 def decodeCBC(key, IV, cipherText):
-	plainText = ''
+	plainText = ""
 	offset = 0
 	aes = AES.new(key)
 	while offset < len(cipherText):
@@ -45,10 +45,10 @@ def decodeCBC(key, IV, cipherText):
 	return plainText
 
 def encodeCBC(key, IV, plainText):
-	cipherText = ''
+	cipherText = ""
 	offset = 0
 	aes = AES.new(key)
-	while offset < len(plainText):
+	while offset <= len(plainText):
 		plainBlock = plainText[offset:offset+BLOCKSIZE]
 		# add padding
 		if len(plainBlock) < BLOCKSIZE:
@@ -60,29 +60,21 @@ def encodeCBC(key, IV, plainText):
 		IV = cipherBlock
 		offset += BLOCKSIZE
 
-	# add padding if last byte exactly on BLOCKSIZE boundary
-	if offset == len(plainText):
-		c = BLOCKSIZE
-		plainBlock = chr(c) * c
-		ecbBlock = stringStringXor(plainBlock, IV)
-		cipherBlock = aes.encrypt(ecbBlock)
-		cipherText += cipherBlock
-
 	return cipherText
 
 from random import randint
 def randomString(n):
-	result =""
+	result = ""
 	for x in range(0, n):
 		result += chr(randint(0, 255))
 	return result
-	
+
 def encryptionOracle(data):
 	data = randomString(randint(5, 10)) + data + randomString(randint(5, 10))
 	key = randomString(BLOCKSIZE)
 	encryptMode = randint(0, 1)
 	print "encrypted with",
-	if encryptMode == 0:
+	if encryptMode == 1:
 		print "ECB -->",
 		return encodeECB(key, data)
 	else:
@@ -91,7 +83,7 @@ def encryptionOracle(data):
 		return encodeCBC(key, IV, data)
 
 def detectEncryption(encryptedData):
-	# first block (1) & last block (4) contains 5-10 random unknown bytes added in encryptionOracle
+	# first block & last block contains 5-10 random unknown bytes added in encryptionOracle
 	# so we can only use intermediate blocks 2 & 3 to check for equal content
 	if encryptedData[BLOCKSIZE * 1:BLOCKSIZE * 2] == encryptedData[BLOCKSIZE * 2:BLOCKSIZE * 3]:
 		print "ECB"
@@ -105,7 +97,4 @@ plainText = " " * 43
 for i in range(1, 20):
 	encryptedData = encryptionOracle(plainText)
 	detectEncryption(encryptedData)
-	
-
-
 

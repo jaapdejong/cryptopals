@@ -1,16 +1,10 @@
 #!/usr/bin/python
 
-def pad(s, l):
-	if len(s) > l:
-		return None
-	c = l - len(s) % l
-	return s + c * chr(c)
-
-#pad = lambda s, l: s + (l - len(s) % l) * chr(l - len(s) % l)
+pad = lambda s, l: s + (l - len(s) % l) * chr(l - len(s) % l) if (len(s) <= l) else s
 
 s = "YELLOW SUBMARINE"
 
-assert pad(s, 15) == None
+assert pad(s, 15) == "YELLOW SUBMARINE"
 assert pad(s, 16) == "YELLOW SUBMARINE\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10"
 assert pad(s, 17) == "YELLOW SUBMARINE\x01"
 assert pad(s, 18) == "YELLOW SUBMARINE\x02\x02"
