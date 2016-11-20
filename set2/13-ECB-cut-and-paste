@@ -90,28 +90,34 @@ BLOCKSIZE = 16
 key = randomString(BLOCKSIZE)
 
 # Goal: make sure a new block starts at the 'role' by changing the length of the emailaddress
-DOMAIN = "@bar.com"
-ROLEPOSITION = profile_for(DOMAIN).find("role=") + 5
-USER = "x" * (BLOCKSIZE - ROLEPOSITION % BLOCKSIZE)
-cipherText1 = encodeECB(key, profile_for(USER + DOMAIN))
-# email=xxxxx@bar.com&uid=10&role=user
-# ...............|...............|....
+user = "foo@bar.com"
+rolePosition = profile_for(user).find("user")
+user = "x" * (BLOCKSIZE - rolePosition % BLOCKSIZE) + user
+plainText1 = profile_for(user)
+cipherText1 = encodeECB(key, plainText1)
+begin1 = 0
+end1 = plainText1.find("user")
+# email=xxfoo@bar.com&uid=10&role=user
+# |...............|...............|....
+part1 = cipherText1[begin1:end1]
+# email=xxfoo@bar.com&uid=10&role=
+# |...............|...............|
 
 # Goal: get 'admin' at the start of a new block and add fake padding
-ROLE = "admin"
-ADMINPOSITION = profile_for(ROLE).find(ROLE)
-USER = "+" * (BLOCKSIZE - ADMINPOSITION)
-cipherText2 = encodeECB(key, profile_for(USER + pad(ROLE, BLOCKSIZE)))
+role = "admin"
+adminPosition = profile_for(role).find(role)
+user = "+" * (BLOCKSIZE - adminPosition) + pad(role, BLOCKSIZE)
+plainText2 = profile_for(user)
+cipherText2 = encodeECB(key, plainText2)
+begin2 = plainText2.find(role)
+end2 = plainText2.find("&")
 # email=++++++++++adminXXXXXXXXXXX&uid=10&role=user
-# ...............|...............|...............|.
-
-# Add them together to form a new ciphertext
-PART1 = cipherText1[0:32]
-# email=xxxxx@bar.com&uid=10&role=
-# ...............|...............|
-PART2 = cipherText2[16:32]
+# |...............|...............|...............|.
+part2 = cipherText2[begin2:end2]
 # adminXXXXXXXXXXX
-# ...............|
-print decodeECB(key, PART1 + PART2)
-# email=xxxxx@bar.com&uid=10&role=admin
+# |...............|
+
+# Add the 2 parts together to form a new ciphertext
+print decodeECB(key, part1 + part2)
+# email=xxfoo@bar.com&uid=10&role=admin
 
