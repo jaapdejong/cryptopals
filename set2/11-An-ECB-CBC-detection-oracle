@@ -70,11 +70,12 @@ def randomString(n):
 	return result
 
 def encryptionOracle(data):
+	global encryptMode
 	data = randomString(randint(5, 10)) + data + randomString(randint(5, 10))
 	key = randomString(BLOCKSIZE)
 	encryptMode = randint(0, 1)
 	print "encrypted with",
-	if encryptMode == 1:
+	if encryptMode == 0:
 		print "ECB -->",
 		return encodeECB(key, data)
 	else:
@@ -87,8 +88,10 @@ def detectEncryption(encryptedData):
 	# so we can only use intermediate blocks 2 & 3 to check for equal content
 	if encryptedData[BLOCKSIZE * 1:BLOCKSIZE * 2] == encryptedData[BLOCKSIZE * 2:BLOCKSIZE * 3]:
 		print "ECB"
+		assert encryptMode == 0
 	else:
 		print "CBC"
+		assert encryptMode == 1
 
 # must be larger than 3 * BLOCKSIZE - minimum number of added random unknown bytes = 48 - 5 = 43
 # if less, detectEncryption is not able to do a proper comparison of two blocks 

@@ -1,13 +1,41 @@
 #!/usr/bin/python
 
-pad = lambda s, l: s + (l - len(s) % l) * chr(l - len(s) % l) if (len(s) <= l) else s
+pad = lambda s, l: s + (l - len(s) % l) * chr(l - len(s) % l)
 
 s = "YELLOW SUBMARINE"
 
-assert pad(s, 15) == "YELLOW SUBMARINE"
-assert pad(s, 16) == "YELLOW SUBMARINE\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10"
-assert pad(s, 17) == "YELLOW SUBMARINE\x01"
-assert pad(s, 18) == "YELLOW SUBMARINE\x02\x02"
-assert pad(s, 19) == "YELLOW SUBMARINE\x03\x03\x03"
-assert pad(s, 20) == "YELLOW SUBMARINE\x04\x04\x04\x04"
+assert pad(s,  1) == s + chr( 1) *  1
+assert pad(s,  2) == s + chr( 2) *  2
+assert pad(s,  3) == s + chr( 2) *  2
+assert pad(s,  4) == s + chr( 4) *  4
+assert pad(s,  5) == s + chr( 4) *  4
+assert pad(s,  6) == s + chr( 2) *  2
+assert pad(s,  7) == s + chr( 5) *  5
+assert pad(s,  8) == s + chr( 8) *  8
+assert pad(s,  9) == s + chr( 2) *  2
+assert pad(s, 10) == s + chr( 4) *  4
+assert pad(s, 11) == s + chr( 6) *  6
+assert pad(s, 12) == s + chr( 8) *  8
+assert pad(s, 13) == s + chr(10) * 10
+assert pad(s, 14) == s + chr(12) * 12
+assert pad(s, 15) == s + chr(14) * 14
+assert pad(s, 16) == s + chr(16) * 16
+assert pad(s, 17) == s + chr( 1) *  1
+assert pad(s, 18) == s + chr( 2) *  2
+assert pad(s, 19) == s + chr( 3) *  3
+assert pad(s, 20) == s + chr( 4) *  4
+assert pad(s, 21) == s + chr( 5) *  5
+assert pad(s, 22) == s + chr( 6) *  6
+assert pad(s, 23) == s + chr( 7) *  7
+assert pad(s, 24) == s + chr( 8) *  8
+assert pad(s, 25) == s + chr( 9) *  9
+assert pad(s, 26) == s + chr(10) * 10
+assert pad(s, 27) == s + chr(11) * 11
+assert pad(s, 28) == s + chr(12) * 12
+assert pad(s, 29) == s + chr(13) * 13
+assert pad(s, 30) == s + chr(14) * 14
+assert pad(s, 31) == s + chr(15) * 15
+assert pad(s, 32) == s + chr(16) * 16
+assert pad(s, 33) == s + chr(17) * 17
+assert pad(s, 34) == s + chr(18) * 18
 
