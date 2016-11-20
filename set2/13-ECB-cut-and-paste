@@ -66,11 +66,11 @@ assert s2json("foo=bar&baz=qux")            == "{\n  foo: 'bar',\n  baz: 'qux'\n
 assert s2json("foo=bar&baz=qux&zap=")       == "{\n  foo: 'bar',\n  baz: 'qux',\n  zap: ''\n}"
 assert s2json("foo=bar&baz=qux&zap=zazzle") == "{\n  foo: 'bar',\n  baz: 'qux',\n  zap: 'zazzle'\n}"
 
-def json2s(s):						# "{\n  foo: 'bar',\n  baz: 'qux',\n  zap: 'zazzle'\n}" 
-	s = re.sub("{[ \n\r]*", "", s)			# --> "foo: 'bar',\n  baz: 'qux',\n  zap: 'zazzle'\n}"
-	s = re.sub("'[ \n\r]*}", "", s)			# --> "foo: 'bar',\n  baz: 'qux',\n  zap: 'zazzle"
-	s = re.sub("'[ \n\r]*,[ \n\r]*", "&", s)	# --> "foo: 'bar&baz: 'qux&zap: 'zazzle"
-	s = re.sub("[ \n\r]*:[ \n\r]*'", "=", s)	# --> "foo=bar&baz=qux&zap=zazzle"
+def json2s(s):					# "{\n  foo: 'bar',\n  baz: 'qux',\n  zap: 'zazzle'\n}" 
+	s = re.sub("{\s*", "", s)		# --> "foo: 'bar',\n  baz: 'qux',\n  zap: 'zazzle'\n}"
+	s = re.sub("'\s*}", "", s)		# --> "foo: 'bar',\n  baz: 'qux',\n  zap: 'zazzle"
+	s = re.sub("'\s*,\s*", "&", s)		# --> "foo: 'bar&baz: 'qux&zap: 'zazzle"
+	s = re.sub("\s*:\s*'", "=", s)		# --> "foo=bar&baz=qux&zap=zazzle"
 	return s
 
 assert json2s("")                                                    == ""
