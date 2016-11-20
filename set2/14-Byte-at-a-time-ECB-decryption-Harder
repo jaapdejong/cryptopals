@@ -1,1 +1,170 @@
 #!/usr/bin/python
+
+# Byte-at-a-time ECB decryption (Harder)
+# Take your oracle function from #12. Now generate a random count of random bytes and prepend this string to every plaintext. You are now doing:
+#
+# AES-128-ECB(your-string || unknown-string, random-key) ### ex12
+# AES-128-ECB(random-prefix || attacker-controlled || target-bytes, random-key) ### ex14
+# Same goal: decrypt the target-bytes.
+#
+# Stop and think for a second.
+# What's harder than challenge #12 about doing this? How would you overcome that obstacle? The hint is: you're using all the tools you already have; no crazy math is required.
+#
+# Think "STIMULUS" and "RESPONSE".
+
+# randomString
+from random import randint
+def randomString(n):
+	result = ""
+	for x in range(0, n):
+		result += chr(randint(0, 255))
+	return result
+
+# encodeBase64 / decodeBase64
+import base64
+encodeBase64 = lambda s: base64.b64encode(s)
+decodeBase64 = lambda s: base64.b64decode(s)
+s1 = randomString(32)
+assert decodeBase64(encodeBase64(s1)) == s1
+
+# hexString2string / string2hexString
+hexString2string = lambda s: s.decode("hex")
+string2hexString = lambda s: s.encode("hex")
+assert string2hexString(hexString2string("00112233445566778899aabbccddeeff")) == "00112233445566778899aabbccddeeff"
+
+# stringStringXor
+stringStringXor = lambda s1, s2: "".join(chr(ord(a) ^ ord(b)) for a,b in zip(s1, s2))
+s1 = randomString(32)
+s2 = randomString(32)
+s3 = stringStringXor(s1, s2)
+assert stringStringXor(s3, s2) == s1
+
+# encodeECB / decodeECB
+from Crypto.Cipher import AES
+pad = lambda s, l: s + (l - len(s) % l) * chr(l - len(s) % l)
+unpad = lambda s: s[:-ord(s[-1:])]
+encodeECB = lambda key, s: AES.new(key).encrypt(pad(s, len(key)))
+decodeECB = lambda key, s: unpad(AES.new(key).decrypt(s))
+key = "1234567890123456"
+assert decodeECB(key, encodeECB(key, "Hello World!")) == "Hello World!"
+
+# encodeCBC / decodeCBC
+BLOCKSIZE = 16
+def encodeCBC(key, IV, plainText):
+	cipherText = ""
+	offset = 0
+	aes = AES.new(key)
+	while offset <= len(plainText):
+		plainBlock = plainText[offset:offset+BLOCKSIZE]
+		# add padding
+		if len(plainBlock) < BLOCKSIZE:
+			c = BLOCKSIZE - len(plainBlock)
+			plainBlock += chr(c) * c
+		ecbBlock = stringStringXor(plainBlock, IV)
+		cipherBlock = aes.encrypt(ecbBlock)
+		cipherText += cipherBlock
+		IV = cipherBlock
+		offset += BLOCKSIZE
+
+	return cipherText
+
+def decodeCBC(key, IV, cipherText):
+	plainText = ""
+	offset = 0
+	aes = AES.new(key)
+	while offset < len(cipherText):
+		cipherBlock = cipherText[offset:offset+BLOCKSIZE]
+		ecbBlock = aes.decrypt(cipherBlock)
+		plainBlock = stringStringXor(ecbBlock, IV)
+		plainText += plainBlock
+		IV = cipherBlock
+		offset += BLOCKSIZE
+
+	# strip off padding bytes
+	plainText = plainText[:-ord(plainText[-1:])]
+	return plainText
+
+key = "1234567890123456"
+IV = "ABCDEFGHIJKLMNOP"
+assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARI")) == "YELLOW SUBMARI"
+assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARIN")) == "YELLOW SUBMARIN"
+assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARINE")) == "YELLOW SUBMARINE"
+assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARINES")) == "YELLOW SUBMARINES"
+assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARINES!")) == "YELLOW SUBMARINES!"
+
+# the challenge
+secretEncodedText = \
+	"Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg" + \
+	"aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq" + \
+	"dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg" + \
+	"YnkK"
+secretPlainText = decodeBase64(secretEncodedText)
+secretKey = randomString(BLOCKSIZE)
+secretPrefixText = randomString(randint(0, 5 * BLOCKSIZE))
+
+def encryptionOracle(data):
+	return encodeECB(secretKey, secretPrefixText + data + secretPlainText)
+
+# the solution
+def findBlockSize():
+	s = ""
+	emptyLen = len(encryptionOracle(s))
+	while True:
+		s = s + " "
+		newLen = len(encryptionOracle(s))
+		if (newLen != emptyLen):
+			return newLen - emptyLen
+
+def findPrefixSize(blockSize):
+	
+	def findMatchingPosition(s):
+		for index1 in range(0, len(s), blockSize):
+			index2 = index1 + blockSize
+			index3 = index2 + blockSize
+			if s[index1:index2] == s[index2:index3]:
+				return index1
+		return None
+	
+	# if 2 blocks (preceded by a block of a certain length) with the same data 
+	# match, we know how big the prefix is
+	for extra in range(1, blockSize + 1):
+		encrypted = encryptionOracle("-" * extra + "+" * blockSize * 2)
+		matchingPosition = findMatchingPosition(encrypted)
+		if matchingPosition != None:
+			return matchingPosition - extra
+	return None
+
+def findNextChar(blockSize, plainText):
+	# prepend 0..blockSize-1 chars
+	prependText = " " * (blockSize - len(plainText) % blockSize - 1)
+	prependedPlainText = prependText + plainText
+	textLen = len(prependedPlainText) + 1
+	encryptedText = encryptionOracle(prependText)[:textLen]
+	for ch in range(0, 256):
+		if encryptionOracle(prependedPlainText + chr(ch))[:textLen] == encryptedText:
+			return chr(ch)
+	return None
+
+def decode(blockSize):
+	plainText = ""
+	while True:
+		ch = findNextChar(blockSize, plainText)
+		if ch == None:
+			return unpad(plainText)
+		plainText += ch
+
+blockSize = findBlockSize()
+prefixSize = findPrefixSize(blockSize)
+
+#decodedText = decode(blockSize)
+#print decodedText
+#assert decodedText == secretPlainText
+
+#prefixSize = findPrefixSize(blockSize)
+for n in range(20000):
+	secretPrefixText = randomString(randint(0, 10 * BLOCKSIZE))
+
+	prefixSize = findPrefixSize(blockSize)
+	if prefixSize != len(secretPrefixText):
+		print n, "[ERROR] secretPrefixText:", len(secretPrefixText), ", prefixSize:", prefixSize
+
