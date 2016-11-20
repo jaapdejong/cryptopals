@@ -45,7 +45,7 @@
 # randomString
 from random import randint
 def randomString(n):
-	result =""
+	result = ""
 	for x in range(0, n):
 		result += chr(randint(0, 255))
 	return result
@@ -63,7 +63,7 @@ string2hexString = lambda s: s.encode("hex")
 assert string2hexString(hexString2string("00112233445566778899aabbccddeeff")) == "00112233445566778899aabbccddeeff"
 
 # stringStringXor
-stringStringXor = lambda s1, s2: ''.join(chr(ord(a) ^ ord(b)) for a,b in zip(s1, s2))
+stringStringXor = lambda s1, s2: "".join(chr(ord(a) ^ ord(b)) for a,b in zip(s1, s2))
 s1 = randomString(32)
 s2 = randomString(32)
 s3 = stringStringXor(s1, s2)
@@ -138,20 +138,18 @@ def findNextChar(key, plainText):
 	prependedPlainText = prependText + plainText
 	textLen = len(prependedPlainText) + 1
 	encryptedText = encryptionOracle(key, prependText)[:textLen]
-	for char in map(chr, xrange(0, 256)):
-		if encryptionOracle(key, prependedPlainText + char)[:textLen] == encryptedText:
-			return char			
+	for ch in range(0, 256):
+		if encryptionOracle(key, prependedPlainText + chr(ch))[:textLen] == encryptedText:
+			return chr(ch)
 	return ""
 
 def decode():
 	plainText = ""
 	key = randomString(BLOCKSIZE)
-	while True:
+	for i in range(0, len(decodedExtraText)):
 		nextChar = findNextChar(key, plainText)
-		if nextChar == "":
-			return plainText
 		plainText += nextChar
+	return plainText
 
 print decode()
-
 

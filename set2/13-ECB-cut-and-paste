@@ -46,7 +46,7 @@ decodeECB = lambda key, s: unpad(AES.new(key).decrypt(s))
 
 from random import randint
 def randomString(n):
-	result =""
+	result = ""
 	for x in range(0, n):
 		result += chr(randint(0, 255))
 	return result
