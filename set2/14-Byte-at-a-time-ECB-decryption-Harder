@@ -100,7 +100,9 @@ secretEncodedText = \
 	"YnkK"
 secretPlainText = decodeBase64(secretEncodedText)
 secretKey = randomString(BLOCKSIZE)
-secretPrefixText = randomString(randint(0, 5 * BLOCKSIZE))
+# TODO
+secretPrefixText = randomString(24) #randint(0, 5 * BLOCKSIZE))
+print len(secretPrefixText)
 
 def encryptionOracle(data):
 	return encodeECB(secretKey, secretPrefixText + data + secretPlainText)
@@ -110,7 +112,7 @@ def findBlockSize():
 	s = ""
 	emptyLen = len(encryptionOracle(s))
 	while True:
-		s = s + " "
+		s += " "
 		newLen = len(encryptionOracle(s))
 		if (newLen != emptyLen):
 			return newLen - emptyLen
@@ -134,37 +136,63 @@ def findPrefixSize(blockSize):
 			return matchingPosition - extra
 	return None
 
-def findNextChar(blockSize, plainText):
-	# prepend 0..blockSize-1 chars
-	prependText = " " * (blockSize - len(plainText) % blockSize - 1)
+# dit werkt voor len(secretPrefixText) = 0..14
+def OKfindNextChar(blockSize, prefixSize, plainText):
+	# extra chars needed to fill up the secretPrefixText until at blockSize border
+	compensateForPrefix = blockSize - (prefixSize % blockSize)
+	prependText = " " * (compensateForPrefix + blockSize - (len(plainText) % blockSize) - 1)
 	prependedPlainText = prependText + plainText
 	textLen = len(prependedPlainText) + 1
 	encryptedText = encryptionOracle(prependText)[:textLen]
+	print compensateForPrefix, len(prependText), textLen,
 	for ch in range(0, 256):
 		if encryptionOracle(prependedPlainText + chr(ch))[:textLen] == encryptedText:
 			return chr(ch)
 	return None
 
-def decode(blockSize):
+def findNextChar(blockSize, prefixSize, plainText):
+	# extra chars needed to fill up the secretPrefixText until at blockSize border
+	compensateForPrefix = blockSize - (prefixSize % blockSize)
+#	prependText = " " * (2 * blockSize + compensateForPrefix + blockSize - (len(plainText) % blockSize) - 1)	# werkt voor extraLen 0..14 maar niet voor 15 en hoger??
+#	prependText = " " * (blockSize + compensateForPrefix + blockSize - (len(plainText) % blockSize) - 1)		# werkt voor extraLen 0..14 maar niet voor 15 en hoger??
+#	prependText = " " * (compensateForPrefix + blockSize - (len(plainText) % blockSize) - 1)	 		# werkt voor extraLen 0..14 maar niet voor 15 en hoger??
+	prependText = "-" * (compensateForPrefix + blockSize - (len(plainText) % blockSize) - 1)
+	prependedPlainText = prependText + plainText
+	textLen = len(prependedPlainText) + 1
+	encryptedText = encryptionOracle(prependText)[:textLen]
+#	secretPrefixText + prependText + secretPlainText
+#	                   =============================
+# A	8....... 8....... xxxxxxxxxxxxxxxxxxxxxx
+#	24...................... 8....... xxxxxxxxxxxxxxxxxxxxxx
+
+	print compensateForPrefix, len(prependText), textLen,
+	for ch in range(0, 256):
+		if encryptionOracle(prependedPlainText + chr(ch))[:textLen] == encryptedText:
+#	secretPrefixText + prependedPlainText + ch + secretPlainText
+#	8....... 8....... - ch xxxxxxxxxxxxxxxxxxxxxx
+#	24...................... 8....... - ch xxxxxxxxxxxxxxxxxxxxxx
+			return chr(ch)
+	return None
+
+def decode(blockSize, prefixSize):
 	plainText = ""
 	while True:
-		ch = findNextChar(blockSize, plainText)
+		ch = findNextChar(blockSize, prefixSize, plainText)
 		if ch == None:
 			return unpad(plainText)
 		plainText += ch
+		print ch
 
 blockSize = findBlockSize()
 prefixSize = findPrefixSize(blockSize)
+decodedText = decode(blockSize, prefixSize)
+print decodedText
 
-#decodedText = decode(blockSize)
-#print decodedText
-#assert decodedText == secretPlainText
-
-#prefixSize = findPrefixSize(blockSize)
-for n in range(20000):
-	secretPrefixText = randomString(randint(0, 10 * BLOCKSIZE))
-
-	prefixSize = findPrefixSize(blockSize)
-	if prefixSize != len(secretPrefixText):
-		print n, "[ERROR] secretPrefixText:", len(secretPrefixText), ", prefixSize:", prefixSize
+#for i in range(0, BLOCKSIZE - 1):
+#	secretPrefixText = randomString(i)
+#	print i
+#	blockSize = findBlockSize()
+#	prefixSize = findPrefixSize(blockSize)
+#	decodedText = decode(blockSize, prefixSize)
+#	assert decodedText == secretPlainText
 
