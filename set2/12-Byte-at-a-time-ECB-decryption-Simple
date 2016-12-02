@@ -79,22 +79,22 @@ key = "1234567890123456"
 assert decodeECB(key, encodeECB(key, "Hello World!")) == "Hello World!"
 
 # encodeCBC / decodeCBC
-BLOCKSIZE = 16
 def encodeCBC(key, IV, plainText):
 	cipherText = ""
 	offset = 0
 	aes = AES.new(key)
+	blockSize = len(key)
 	while offset <= len(plainText):
-		plainBlock = plainText[offset:offset+BLOCKSIZE]
+		plainBlock = plainText[offset:offset+blockSize]
 		# add padding
-		if len(plainBlock) < BLOCKSIZE:
-			c = BLOCKSIZE - len(plainBlock)
+		if len(plainBlock) < blockSize:
+			c = blockSize - len(plainBlock)
 			plainBlock += chr(c) * c
 		ecbBlock = stringStringXor(plainBlock, IV)
 		cipherBlock = aes.encrypt(ecbBlock)
 		cipherText += cipherBlock
 		IV = cipherBlock
-		offset += BLOCKSIZE
+		offset += blockSize
 
 	return cipherText
 
@@ -102,17 +102,16 @@ def decodeCBC(key, IV, cipherText):
 	plainText = ""
 	offset = 0
 	aes = AES.new(key)
+	blockSize = len(key)
 	while offset < len(cipherText):
-		cipherBlock = cipherText[offset:offset+BLOCKSIZE]
+		cipherBlock = cipherText[offset:offset+blockSize]
 		ecbBlock = aes.decrypt(cipherBlock)
 		plainBlock = stringStringXor(ecbBlock, IV)
 		plainText += plainBlock
 		IV = cipherBlock
-		offset += BLOCKSIZE
+		offset += blockSize
 
-	# strip off padding bytes
-	plainText = plainText[:-ord(plainText[-1:])]
-	return plainText
+	return unpad(plainText)
 
 key = "1234567890123456"
 IV = "ABCDEFGHIJKLMNOP"
@@ -123,35 +122,53 @@ assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARINES")) == "YELLOW SU
 assert decodeCBC(key, IV, encodeCBC(key, IV, "YELLOW SUBMARINES!")) == "YELLOW SUBMARINES!"
 
 # the challenge
-secretEncodedText = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg" + \
+secretEncodedText = \
+	"Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg" + \
 	"aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq" + \
 	"dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg" + \
 	"YnkK"
-secretDecodedText = decodeBase64(secretEncodedText)
-secretKey = randomString(BLOCKSIZE)
+secretPlainText = decodeBase64(secretEncodedText)
+secretKey = randomString(16)
 
 def encryptionOracle(data):
-	return encodeECB(secretKey, data + secretDecodedText)
+	return encodeECB(secretKey, data + secretPlainText)
 
-# the solution
-def findNextChar(plainText):
-	# prepend 0..BLOCKSIZE-1 chars
-	prependText = " " * (BLOCKSIZE - len(plainText) % BLOCKSIZE - 1)
-	prependedPlainText = prependText + plainText
-	textLen = len(prependedPlainText) + 1
-	encryptedText = encryptionOracle(prependText)[:textLen]
+# calculate the total size of the encrypted message
+def findTotalSize():
+	return len(encryptionOracle(""))
+
+# calculate the size of the blocks
+def findBlockSize():
+	s = ""
+	emptyLen = len(encryptionOracle(s))
+	while True:
+		s += " "
+		newLen = len(encryptionOracle(s))
+		if (newLen != emptyLen):
+			return newLen - emptyLen
+
+# find the next character
+def findNextChar(blockSize, totalSize, plainText):
+	filler = " " * (totalSize -  len(plainText) - 1)
+	reference = encryptionOracle(filler)[:totalSize]
 	for ch in range(0, 256):
-		if encryptionOracle(prependedPlainText + chr(ch))[:textLen] == encryptedText:
+		if encryptionOracle(filler + plainText + chr(ch))[:totalSize] == reference:
 			return chr(ch)
 	return None
 
-def decode():
+# decode the message returning the plain text
+def decode(blockSize, totalSize):
 	plainText = ""
-	while True:
-		ch = findNextChar(plainText)
+	for i in range(0, totalSize):
+		ch = findNextChar(blockSize, totalSize, plainText)
 		if ch == None:
-			return unpad(plainText)
+			break
 		plainText += ch
+	return unpad(plainText)
 
-print decode()
+blockSize = findBlockSize()
+totalSize = findTotalSize()
+plainText = decode(blockSize, totalSize)
+print plainText
+assert plainText == secretPlainText
 
