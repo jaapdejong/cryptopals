@@ -18,7 +18,6 @@
 # 
 # Crypto nerds know where we're going with this. Bear with us.
 
-blockSize = 16
 def unpad(s):
 	lastChar = s[-1:]
 	for i in range(-ord(lastChar), -1):
